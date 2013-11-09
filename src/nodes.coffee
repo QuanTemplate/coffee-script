@@ -277,6 +277,8 @@ exports.Block = class Block extends Base
         # This is a nested block. We don't do anything special here like enclose
         # it in a new scope; we just compile the statements in this block along with
         # our own
+        # AB: This is why indentation doesn't seem as strict as Python... .
+        #     We could raise an error here instead to enfroce non-stupid indentation patterns.
         compiledNodes.push node.compileNode o
       else if top
         node.front = true
@@ -703,13 +705,34 @@ exports.Call = class Call extends Base
 # After `goog.inherits` from the
 # [Closure Library](http://closure-library.googlecode.com/svn/docs/closureGoogBase.js.html).
 exports.Extends = class Extends extends Base
-  constructor: (@child, @parent) ->
+  constructor: (@child, @parent, @className) ->
 
   children: ['child', 'parent']
 
   # Hooks one constructor into another's prototype chain.
   compileToFragments: (o) ->
-    new Call(new Value(new Literal utility 'extends'), [@child, @parent]).compileToFragments o
+    name = new Literal  "\"#{@className}\""
+    new Call(new Value(new Literal utility 'extends'), [@child, @parent, name]).compileToFragments o
+
+
+#### Finalise 
+
+# To achieve a more flexibile metasystem, we need a hook to know 
+# when a class has been full defined. So at the end of the class 
+# definition closure, we insert a finalise call to do just that. 
+# For constructors without a 'finalise' method, we don't do 
+# anything. So it shouldn't screw up anything.  
+exports.Finalise = class Finalise extends Base
+  constructor: (@child, @className) ->
+
+  children: ['child']
+
+  # Hooks one constructor into another's prototype chain.
+  compileToFragments: (o) ->
+    name = new Literal  "\"#{@className}\""
+    new Call(new Value(new Literal utility 'finalise'), [@child, name]).compileToFragments o
+
+
 
 #### Access
 
@@ -1086,14 +1109,17 @@ exports.Class = class Class extends Base
     @ensureConstructor name, o
     @body.spaced = yes
     @body.expressions.unshift @ctor unless @ctor instanceof Code
-    @body.expressions.push lname
+    
+    # Finalise the class, the result of this gets returned 
+    # and ultimateluy assigned outside the class defining closure.
+    @body.expressions.push new Finalise lname, name
     @body.expressions.unshift @directives...
 
     call  = Closure.wrap @body
 
     if @parent
       @superClass = new Literal o.scope.freeVariable 'super', no
-      @body.expressions.unshift new Extends lname, @superClass
+      @body.expressions.unshift new Extends lname, @superClass, name
       call.args.push @parent
       params = call.variable.params or call.variable.base.params
       params.push new Param @superClass
@@ -2116,7 +2142,7 @@ UTILITIES =
   # Correctly set up a prototype chain for inheritance, including a reference
   # to the superclass for `super()` calls, and copies of any static properties.
   extends: -> """
-    function(child, parent) { for (var key in parent) { if (#{utility 'hasProp'}.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; }
+    function(child, parent, name) { if(parent.__extends__) return parent.__extends__(child, name); for (var key in parent) { if (#{utility 'hasProp'}.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; }
   """
 
   # Create a function bound to the current value of "this".
@@ -2127,6 +2153,11 @@ UTILITIES =
   # Discover if an item is in an array.
   indexOf: -> """
     [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; }
+  """
+
+  # Finalise a class, once all its members have been declared, returing the result 
+  finalise: -> """
+    function(ctor, name) { return ctor.__finalise__ ? ctor.__finalise__(name) : ctor; }
   """
 
   # Shortcuts to speed up the lookup time for native functions.
