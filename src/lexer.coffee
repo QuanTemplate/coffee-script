@@ -196,7 +196,7 @@ exports.Lexer = class Lexer
         if 0 < string.indexOf '#{', 1
           @interpolateString string[1...-1], strOffset: 1, lexedLength: string.length
         else
-          @token 'STRING', @escapeLines string, 0, string.length
+          @token 'STRING', @escapeLines(string), 0, string.length
       else
         return 0
     if octalEsc = /^(?:\\.|[^\\])*\\(?:0[0-7]|[1-7])/.test string
@@ -255,7 +255,7 @@ exports.Lexer = class Lexer
   heregexToken: (match) ->
     [heregex, body, flags] = match
     if 0 > body.indexOf '#{'
-      re = body.replace(HEREGEX_OMIT, '').replace(/\//g, '\\/')
+      re = @escapeLines body.replace(HEREGEX_OMIT, '$1$2').replace(/\//g, '\\/'), yes
       if re.match /^\*/ then @error 'regular expressions cannot begin with `*`'
       @token 'REGEX', "/#{ re or '(?:)' }/#{flags}", 0, heregex.length
       return heregex.length
@@ -267,7 +267,7 @@ exports.Lexer = class Lexer
       if tag is 'TOKENS'
         tokens.push value...
       else if tag is 'NEOSTRING'
-        continue unless value = value.replace HEREGEX_OMIT, ''
+        continue unless value = value.replace HEREGEX_OMIT, '$1$2'
         # Convert NEOSTRING into STRING
         value = value.replace /\\/g, '\\\\'
         token[0] = 'STRING'
@@ -806,9 +806,13 @@ REGEX = /// ^
   /) ([imgy]{0,4}) (?!\w)
 ///
 
-HEREGEX      = /// ^ /{3} ([\s\S]+?) /{3} ([imgy]{0,4}) (?!\w) ///
+HEREGEX      = /// ^ /{3} ((?:\\?[\s\S])+?) /{3} ([imgy]{0,4}) (?!\w) ///
 
-HEREGEX_OMIT = /\s+(?:#.*)?/g
+HEREGEX_OMIT = ///
+    ((?:\\\\)+)     # consume (and preserve) an even number of backslashes
+  | \\(\s|/)        # preserve escaped whitespace and "de-escape" slashes
+  | \s+(?:#.*)?     # remove whitespace and comments
+///g
 
 # Token cleaning regexes.
 MULTILINER      = /\n/g
