@@ -394,8 +394,6 @@ test "#3132: Place block-comments nicely", ->
 
     DummyClass.instance = new DummyClass();
 
-    DummyClass;
-
     return __finalise(DummyClass, "DummyClass");
 
   })();

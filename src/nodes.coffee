@@ -1130,8 +1130,6 @@ exports.Class = class Class extends Base
     @addBoundFunctions o
     @body.spaced = yes
 
-    @body.expressions.push lname
-
     # Finalise the class, the result of this gets returned 
     # and ultimateluy assigned outside the class defining closure.
     @body.expressions.push new Finalise lname, name
