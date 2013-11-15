@@ -94,8 +94,6 @@ exports.nodes = withPrettyErrors (source, options) ->
   else
     parser.parse source
 
-exports.setupExtensions = ()->
-  extensions = require './extensions'
 
 # Compile and execute a string of CoffeeScript (on the server), correctly
 # setting `__filename`, `__dirname`, and relative `require()`.
@@ -285,3 +283,6 @@ Error.prepareStackTrace = (err, stack) ->
 
   "#{err.name}: #{err.message ? ''}\n#{frames.join '\n'}\n"
 
+# Import extensiosns, so we can run coffeescript scripts 
+# directly from ndoe.
+require './extensions'
