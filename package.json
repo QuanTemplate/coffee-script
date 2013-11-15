@@ -3,7 +3,7 @@
   "description":  "Unfancy JavaScript",
   "keywords":     ["javascript", "language", "coffeescript", "compiler"],
   "author":       "Jeremy Ashkenas",
-  "version":      "1.6.3",
+  "version":      "1.6.3qt",
   "license":      "MIT",
   "engines":      {
     "node":       ">=0.8.0"
