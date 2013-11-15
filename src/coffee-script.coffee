@@ -94,6 +94,9 @@ exports.nodes = withPrettyErrors (source, options) ->
   else
     parser.parse source
 
+exports.setupExtensions = ()->
+  extensions = require './extensions'
+
 # Compile and execute a string of CoffeeScript (on the server), correctly
 # setting `__filename`, `__dirname`, and relative `require()`.
 exports.run = (code, options = {}) ->
