@@ -38,7 +38,7 @@ test "extends hook is called", ->
 
 
 test "finalise hook is called", -> 
-  finaliseCalled = false 
+  finaliseCalled = false
 
   class ToBeFinalised
     @__finalise__ = (name)->
@@ -57,6 +57,26 @@ test "finalise hook is called", ->
   ok ToBeFinalised.__name__ is "ToBeFinalised"
 
 
+test "metaclass declaration is hoisted", ->
+  # In the generated code, CoffeeScript relies on the fact that all function delcaratiosn are hoisted to call
+  # __extends() on the contructor before it is defined.
+  # Given that the value of the __metaclass__ will be processed by the __extends() call and has to be as
+  # defined for the current class (not a parent)
+  extendsCalled = false
+
+  class Base
+    @__metaclass__ = 'baseMeta'
+
+    # This will get called when Foo is defined
+    @__extends__ = (child, name)->
+      ok name is 'Foo'
+      ok child.__metaclass__ is 'FooMeta'
+      extendsCalled = true
+
+  class Foo extends Base
+    @__metaclass__ = "FooMeta"
+
+  ok extendsCalled
 
 
 

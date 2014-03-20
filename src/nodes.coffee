@@ -1097,6 +1097,25 @@ exports.Class = class Class extends Base
       node instanceof Value and node.isString()
     @directives = expressions.splice 0, index
 
+  # The metaclass
+  hoistMetaclassDeclaration: (ctorName)->
+    {expressions} = @body
+    declIndex = null
+    for node, index in expressions
+      if node instanceof Assign and node.variable instanceof Value
+        ctorBase = (base = node.variable.base) instanceof Literal and base.value is ctorName
+        metaclassAccess = (prop0 = node.variable.properties[0]) instanceof Access and prop0.name instanceof Literal and prop0.name.value is "__metaclass__"
+        if ctorBase and metaclassAccess
+          declIndex = index
+          break
+
+    # TODO: check for multiple metaclass declarations and throw an error here.
+
+    if declIndex isnt null
+      expressions.splice index, 1
+      @directives.push node
+    return 
+
   # Make sure that a constructor is defined for the class, and properly
   # configured.
   ensureConstructor: (name) ->
@@ -1129,9 +1148,12 @@ exports.Class = class Class extends Base
     o.classScope = func.makeScope o.scope
 
     @hoistDirectivePrologue()
+
     @setContext name
     @walkBody name, o
     @ensureConstructor name
+    @hoistMetaclassDeclaration name
+
     @addBoundFunctions o
     @body.spaced = yes
 
