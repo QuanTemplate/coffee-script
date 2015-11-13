@@ -94,6 +94,8 @@ exports.nodes = withPrettyErrors (source, options) ->
   else
     parser.parse source
 
+# Export the AST nodes so that we can check node types etc. 
+exports.parseNodes = require('./nodes')
 
 # Compile and execute a string of CoffeeScript (on the server), correctly
 # setting `__filename`, `__dirname`, and relative `require()`.
